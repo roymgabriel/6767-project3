@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+
 class Factors():
    def __init__(self, window, start, finish, coins_file='coin_universe_150K_40.csv', prices_file='coin_all_prices.csv'):
       # Reading in symbols for the period
