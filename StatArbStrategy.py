@@ -18,6 +18,7 @@ class StatArbStrategy:
         Compute factor returns of the two risk factors at time t.
         :return:
         """
+        # 2+2=4
         pass
 
     def get_PCA(self):
