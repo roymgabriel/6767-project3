@@ -27,7 +27,7 @@ class StatArbStrategy:
         """
         # this is an edit
         return None
-
+        # This is another test
     def estimate_resid_returns(self):
         """
         Estimate residual returns of token S.
