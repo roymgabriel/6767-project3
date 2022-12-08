@@ -34,6 +34,7 @@ class StatArbStrategy:
         Estimate residual returns of token S.
         :return:
         """
+        'HELLO TEST'
         pass
 
     def get_s_score(self):
