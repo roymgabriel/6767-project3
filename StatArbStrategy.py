@@ -25,7 +25,8 @@ class StatArbStrategy:
         Apply Principal Component Anlysis (PCA) and get top two pc vectors along with their eigenvalues.
         :return:
         """
-        pass
+        # this is an edit
+        return None
 
     def estimate_resid_returns(self):
         """
