@@ -22,6 +22,9 @@ class Factors():
       self.M = window
       self.start = start
       self.finish = finish
+      self.asset_std = None
+      self.eigenvalues = None
+      self.eigenvectors = None
 
    def __clean_dates(self, df):
       df['startTime'] = pd.to_datetime(df['startTime'].apply(lambda x : x.split(':')[0]), format='%Y-%m-%dT%H')
@@ -36,32 +39,35 @@ class Factors():
       ret_df = prices_df.pct_change()
       return ret_df
 
-   def __standardize_rets(self, df):
+   def get_standardize_rets(self, df):
       scaler = StandardScaler()
       scaler.fit(df)
+      self.asset_std = np.sqrt(scaler.var_)
       return pd.DataFrame(scaler.transform(df), index=df.index, columns=df.columns)
 
-   def __get_corr_mat(self, df):
-      st_rets = self.__standardize_rets(df)
+   def get_corr_mat(self, df):
+      st_rets = self.get_standardize_rets(df)
       return st_rets.corr()
 
-   def __pca(self, df):
-      emp_corr = self.__get_corr_mat(df)
+   def get_pca(self, df):
+      emp_corr = self.get_corr_mat(df)
       pca_model = PCA(n_components=2)
-      pca_model.fit(df)
+      pca_model.fit(emp_corr)
+      self.eigenvalues = pca_model.explained_variance_
+      self.eigenvectors = pca_model.components_
       # Returns the eigen vectors
-      return pca_model.transform(df)
+      return self.eigenvectors
 
    def test_pca(self, time):
       used_symbols = list(self.symbols_df.loc[time])
       time_idx = self.returns_df.index.get_loc(time)
-      st_rets = self.__standardize_rets(self.returns_df[used_symbols].iloc[time_idx - self.M : time_idx - 1])
-      return self.__pca(st_rets)
+      st_rets = self.get_standardize_rets(self.returns_df[used_symbols].iloc[time_idx - self.M:time_idx - 1])
+      return self.get_pca(st_rets)
 
 
 def main():
-   test = Factors(240, '021-03-08T05 :00 :00+00 :00', '022-09-25T23 :00 :00+00 :00')
-   test.symbols_df.head()
+   test = Factors(240, '2021-03-08 05:00:00', '2022-09-25 23:00:00')
+   print(test.symbols_df.head())
 
 if __name__ == "__main__":
    main()
