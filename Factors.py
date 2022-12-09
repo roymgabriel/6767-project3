@@ -18,10 +18,6 @@ class Factors():
       # Getting the returns from the prices dataframe
       self.returns_df = self.__get_rets(self.prices_df)
 
-      # TODO: change self.finish to something better
-      self.Q_j = self.get_Q(self.finish)
-      self.F_jk = self.get_factor_return()
-
       # Additional parameters
       self.M = window
       self.start = start
@@ -29,6 +25,11 @@ class Factors():
       self.asset_std = None
       self.eigenvalues = None
       self.hourly_rets = None
+
+
+      # TODO: change self.finish to something better
+      self.Q_j = self.get_Q()
+      self.F_jk = self.get_factor_return()
 
    def __clean_dates(self, df):
       df['startTime'] = pd.to_datetime(df['startTime'].apply(lambda x : x.split(':')[0]), format='%Y-%m-%dT%H')
@@ -61,9 +62,9 @@ class Factors():
       # Returns the eigen vectors
       return eigenvectors
 
-   def get_Q(self, time):
-      used_symbols = list(self.symbols_df.loc[time])
-      time_idx = self.returns_df.index.get_loc(time)
+   def get_Q(self):
+      used_symbols = list(self.symbols_df.loc[self.start])
+      time_idx = self.returns_df.index.get_loc(self.start)
       self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M:time_idx - 1]
       st_rets = self.get_standardize_rets(self.hourly_rets)
       pca_eigenvectors = self.get_pca(st_rets)
