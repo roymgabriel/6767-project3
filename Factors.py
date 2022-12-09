@@ -18,13 +18,17 @@ class Factors():
       # Getting the returns from the prices dataframe
       self.returns_df = self.__get_rets(self.prices_df)
 
+      # TODO: change self.finish to something better
+      self.Q_j = self.get_Q(self.finish)
+      self.F_jk = self.get_factor_return()
+
       # Additional parameters
       self.M = window
       self.start = start
       self.finish = finish
       self.asset_std = None
       self.eigenvalues = None
-      self.eigenvectors = None
+      self.hourly_rets = None
 
    def __clean_dates(self, df):
       df['startTime'] = pd.to_datetime(df['startTime'].apply(lambda x : x.split(':')[0]), format='%Y-%m-%dT%H')
@@ -40,10 +44,9 @@ class Factors():
       return ret_df
 
    def get_standardize_rets(self, df):
+      self.asset_std = df.std()  # could also do np.sqrt(scaler.var_)
       scaler = StandardScaler()
-      scaler.fit(df)
-      self.asset_std = np.sqrt(scaler.var_)
-      return pd.DataFrame(scaler.transform(df), index=df.index, columns=df.columns)
+      return pd.DataFrame(scaler.fit_transform(df), index=df.index, columns=df.columns)
 
    def get_corr_mat(self, df):
       st_rets = self.get_standardize_rets(df)
@@ -54,15 +57,22 @@ class Factors():
       pca_model = PCA(n_components=2)
       pca_model.fit(emp_corr)
       self.eigenvalues = pca_model.explained_variance_
-      self.eigenvectors = pca_model.components_
+      eigenvectors = pd.DataFrame(pca_model.components_, columns=df.columns)
       # Returns the eigen vectors
-      return self.eigenvectors
+      return eigenvectors
 
-   def test_pca(self, time):
+   def get_Q(self, time):
       used_symbols = list(self.symbols_df.loc[time])
       time_idx = self.returns_df.index.get_loc(time)
-      st_rets = self.get_standardize_rets(self.returns_df[used_symbols].iloc[time_idx - self.M:time_idx - 1])
-      return self.get_pca(st_rets)
+      self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M:time_idx - 1]
+      st_rets = self.get_standardize_rets(self.hourly_rets)
+      pca_eigenvectors = self.get_pca(st_rets)
+      Q = pca_eigenvectors / self.asset_std
+      return Q
+
+   def get_factor_return(self):
+      # Q is 2x40 and hourly_rets 239x40
+      return self.Q_j@self.hourly_rets.T
 
 
 def main():
