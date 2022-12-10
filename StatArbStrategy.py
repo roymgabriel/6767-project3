@@ -26,7 +26,8 @@ class StatArbStrategy:
         self.hourly_returns = factors.hourly_rets
 
         self.residuals = self.estimate_resid_returns()
-        self.X_l = self.get_X_l()
+        self.X_l, self.xl_residuals = self.get_X_l()
+        self.params_df = self.get_params()
 
     def get_factor_returns(self):
         """
@@ -73,16 +74,21 @@ class StatArbStrategy:
         regressor = LinearRegression()
         X = X_l[:-1] # M-1 rows
         y = X_l_shift[:-1] # M-1 rows
-        d = {}
+        coeffs = {}
+        xl_residuals = {}
         for col in y.columns:
             model = regressor.fit(X[[col]], y[col])
+            y_pred = model.predict(X[[col]])
+            resid = y[col] - y_pred
+            # Adding the residuals for a currency to a dictionary
+            xl_residuals[col] = resid
             # Returns the a and b coefficients for each currency
-            d[col] = [model.coef_[0], model.intercept_]
-        return pd.DataFrame.from_dict(d, orient='index', columns=['b', 'a'])
+            coeffs[col] = [model.coef_[0], model.intercept_]
+        return pd.DataFrame.from_dict(coeffs, orient='index', columns=['b', 'a']).T, pd.DataFrame.from_dict(xl_residuals, orient='columns')
 
 
 
-    def get_params(self, a, b, resid):
+    def get_params(self):
         """
         A function to get greek parameters
         :return:
@@ -90,18 +96,33 @@ class StatArbStrategy:
         #TODO: we can either loop here or in init but basically we loop through each asset and get their
         # a and b and resid from self.xxx, then you do  the calculations below
         # we can store the results in a dictionary for each asset for later functions
-        kappa = -np.log(b) * 252
-        m = a / (1-b)
-        sigma = np.sqrt(np.var(resid) * 2 * kappa / (1 - b**2))
-        sigma_eq = np.sqrt(np.var(resid) / (1 - b**2))
-        return kappa, m, sigma, sigma_eq
-    def get_s_score(self, X_i, m_i, sigma_eq_i):
+
+        # I changed the function to loop through each currency and get the parameters for each one
+        params = {}
+        for col in self.X_l.columns:
+            # Defining the input parameters for each currency
+            a = self.X_l.loc['a', col]
+            b = self.X_l.loc['b', col]
+            resid = self.xl_residuals[col]
+
+            kappa = -np.log(b) * 8760 # For the number of hours in a year
+            m = a / (1-b)
+            sigma = np.sqrt(np.var(resid) * 2 * kappa / (1 - b**2))
+            sigma_eq = np.sqrt(np.var(resid) / (1 - b**2))
+            params[col] = [kappa, m, sigma, sigma_eq]
+        return pd.DataFrame.from_dict(params, orient='index', columns=['kappa', 'm', 'sigma', 'sigma_eq'])
+
+    def get_s_score(self, params_df):
         """
         Calculate s-score at time t.
         :return:
         """
-        # TODO: We need to do this for each asset, X_i is most confusing but it is basically X_l
-        return (X_i - m_i) / sigma_eq_i
+        # TODO: X(t) is 0 for the current time period so the real calculation is s = -m / sigma_eq with the m centered
+        cpy = params_df.copy(deep=True)
+        m_mean = cpy['m'].mean()
+        s_score = (m_mean - cpy['m']) / cpy['sigma_eq']
+        return s_score
+
 
     def deploy_regressor(self):
         """
@@ -122,14 +143,18 @@ class StatArbStrategy:
         s_bc = 0.75
         s_sc = 0.5
 
-        if s_score < -s_bo:
-            return "BTO"
-        elif s_score > s_so:
-            return "STO"
-        elif s_score < s_bc:
-            return "CSP"
-        elif s_score > -s_sc:
-            return "CLP"
+        # Conditions for trading signals
+        conditions = [
+            (s_score < -s_bo),
+            (s_score > s_so),
+            (s_score < s_bc) & (s_score >= -s_bo),
+            (s_score > -s_sc) & (s_score <= s_so)
+        ]
+
+        # Mapped values
+        values = ['BTO', 'STO', 'CSP', 'CLP']
+
+        return pd.Series(np.select(conditions, values), name='Signals', index=s_score.index)
 
 
 
@@ -177,7 +202,12 @@ class StatArbStrategy:
 
 def main():
     test = StatArbStrategy(window=240, start="2021-09-26 00:00:00", finish="2022-09-25 00:00:00")
-    print(test.get_X_l())
+    print(test.get_X_l()[1])
+    params = test.get_params()
+    print(params)
+    s = test.get_s_score(params)
+    print(s)
+    print(test.generate_trading_signals(s))
     print("success")
 
 if __name__ == "__main__":
