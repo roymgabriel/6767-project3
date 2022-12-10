@@ -65,7 +65,7 @@ class Factors():
    def get_Q(self):
       used_symbols = list(self.symbols_df.loc[self.start])
       time_idx = self.returns_df.index.get_loc(self.start)
-      self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M:time_idx - 1]
+      self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M : time_idx]
       st_rets = self.get_standardize_rets(self.hourly_rets)
       pca_eigenvectors = self.get_pca(st_rets)
       Q = pca_eigenvectors / self.asset_std

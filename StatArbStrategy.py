@@ -33,8 +33,7 @@ class StatArbStrategy:
         Compute factor returns of the two risk factors at time t.
         :return:
         """
-        # 2+2=4
-        # thiis is a change
+
         pass
 
     def get_PCA(self):
@@ -66,10 +65,22 @@ class StatArbStrategy:
         Function to get X_l in order to obtain a and b parameters
         :return:
         """
+        ''' FINISHED '''
         # TODO: We need to get the residuals of the future time (t + dt) as well and do regression on those
         # NOTE: this function should return parameters a and b for each asset
-        X_l = self.residuals.sum(axis=0)
-        pass
+        X_l = self.residuals.expanding().sum()
+        X_l_shift = X_l.shift(-1)
+        regressor = LinearRegression()
+        X = X_l[:-1] # M-1 rows
+        y = X_l_shift[:-1] # M-1 rows
+        d = {}
+        for col in y.columns:
+            model = regressor.fit(X[[col]], y[col])
+            # Returns the a and b coefficients for each currency
+            d[col] = [model.coef_[0], model.intercept_]
+        return pd.DataFrame.from_dict(d, orient='index', columns=['b', 'a'])
+
+
 
     def get_params(self, a, b, resid):
         """
@@ -166,6 +177,7 @@ class StatArbStrategy:
 
 def main():
     test = StatArbStrategy(window=240, start="2021-09-26 00:00:00", finish="2022-09-25 00:00:00")
+    print(test.get_X_l())
     print("success")
 
 if __name__ == "__main__":
