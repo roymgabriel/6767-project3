@@ -24,6 +24,7 @@ class StatArbStrategy:
         factors = Factors(window=window, start=start, finish=finish)
         self.factor_returns = factors.get_factor_return()
         self.hourly_returns = factors.hourly_rets
+        self.prices_df = factors.prices_df
 
         self.residuals = self.estimate_resid_returns()
         self.X_l, self.xl_residuals = self.get_X_l()
@@ -107,6 +108,7 @@ class StatArbStrategy:
         Generate trading signals at time t.
         :return:
         """
+        #TODO: might need to pass these as paramters
         s_bo = 1.25
         s_so = 1.25
         s_bc = 0.75

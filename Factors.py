@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
 
-class Factors():
+class Factors:
     def __init__(self, window, start, finish, coins_file='data/coin_universe_150K_40.csv',
                  prices_file='data/coin_all_prices.csv'):
         # Reading in symbols for the period
@@ -16,6 +16,7 @@ class Factors():
         self.prices_df = pd.read_csv(prices_file)
         self.prices_df = self.__clean_dates(self.prices_df)
         self.prices_df = self.__clean_data(self.prices_df)
+        self.prices_df = self.prices_df[self.prices_df.index <= finish]
 
         # Getting the returns from the prices dataframe
         self.returns_df = self.__get_rets(self.prices_df)
@@ -38,6 +39,7 @@ class Factors():
 
     def __clean_data(self, df):
         df.ffill(inplace=True)
+        df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
     def __get_rets(self, prices_df):

@@ -5,7 +5,7 @@ from StatArbStrategy import StatArbStrategy
 
 
 class Trade:
-    def __int__(self, window, start, finish, coins_file='data/coin_universe_150K_40.csv',
+    def __init__(self, window, start, finish, coins_file='data/coin_universe_150K_40.csv',
                 prices_file='data/coin_all_prices.csv'):
         """
         A class that implements a statistical arbitrage strategy as proposed in [Avellaneda and Lee 2010]
@@ -27,6 +27,13 @@ class Trade:
         # create date range in hourly offset
         self.date_range = pd.date_range(start, finish, freq='H')
 
+    def get_state(self):
+        """
+        A function to get all necessary info at time t
+        :return:
+        """
+        pass
+
     def get_trading_signals(self):
         """
         Get trading signals at each time t from start to finish
@@ -44,7 +51,7 @@ class Trade:
 
             # get trading signals with a certain start time and their returns
             self.trading_signals[start_time] = arb.generate_trading_signals(s)
-            self.hourly_returns[start_time] = arb.hourly_returns[-1]
+            self.hourly_returns[start_time] = arb.hourly_returns
 
         return self.trading_signals
 
@@ -59,12 +66,12 @@ class Trade:
         elif x == "CLP":
             return -1
 
-    def trade(self):
+    def trade(self, pos, ):
         # TODO: Need to map whether there was a change in signal or not from previous step
         # TODO: The hourly returns do not match date, need to fix that but the concept is there
         for start_time, df in self.trading_signals.items():
-            df['trade_quant'] = df.apply(self.map_signal_to_trade)
-            self.weighted_returns[start_time] = df['trade_quant'] * self.hourly_returns[start_time]
+            df['trade_pos'] = df.apply(self.map_signal_to_trade)
+            self.weighted_returns[start_time] = df['trade_pos'] * self.hourly_returns[start_time]
 
 
 
