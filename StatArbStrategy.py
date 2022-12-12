@@ -176,7 +176,7 @@ class StatArbStrategy:
 
 
 def main():
-    test = StatArbStrategy(window=240, start="2021-09-26 00:00:00", finish="2022-09-25 00:00:00")
+    test = StatArbStrategy(window=240, start="2021-11-10 05:00:00", finish="2022-09-25 00:00:00")
     print(test.get_X_l()[1])
     params = test.get_params()
     print(params)

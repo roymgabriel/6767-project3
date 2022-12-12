@@ -84,8 +84,10 @@ class Factors:
 
 
 def main():
-    test = Factors(240, '2021-03-08 05:00:00', '2022-09-25 23:00:00')
+    test = Factors(240, "2021-11-10 05:00:00", '2022-09-25 23:00:00')
     print(test.symbols_df.head())
+    print(test.Q_j)
+    print(test.F_jk)
 
 
 if __name__ == "__main__":
