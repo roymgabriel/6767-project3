@@ -60,7 +60,8 @@ class Factors:
         return st_rets.corr()
 
     def get_pca(self, df):
-        emp_corr = self.get_corr_mat(df)
+        emp_corr = self.get_corr_mat(df).fillna(0)
+        print(emp_corr)
         pca_model = PCA(n_components=2)
         pca_model.fit(emp_corr)
         self.eigenvalues = pca_model.explained_variance_
@@ -72,7 +73,7 @@ class Factors:
         used_symbols = list(self.symbols_df.loc[self.start])
         time_idx = self.returns_df.index.get_loc(self.start)
         self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M: time_idx]
-        st_rets = self.get_standardize_rets(self.hourly_rets).dropna(axis=0)
+        st_rets = self.get_standardize_rets(self.hourly_rets).fillna(0)
         pca_eigenvectors = self.get_pca(st_rets)
         Q = pca_eigenvectors / self.asset_std
         return Q

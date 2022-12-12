@@ -21,12 +21,14 @@ class Trade:
         self.coins_file = coins_file
         self.prices_file = prices_file
         self.ret_df = None
+        self.prices_df = None
 
         # create date range in hourly offset
         self.date_range = pd.date_range(start, finish, freq='H')
 
         self.trading_signals = self.get_trading_signals()
         self.weighted_ret = self.trade()
+        self.portfolio_ret = self.get_portfolio_ret()
 
     def get_trading_signals(self):
         """
@@ -37,6 +39,7 @@ class Trade:
         cols = []
         trading_signals = {}
         for start_time in self.date_range:
+            print(start_time)
             arb = StatArbStrategy(window=self.window,
                                   start=start_time,
                                   finish=self.finish,
@@ -50,16 +53,21 @@ class Trade:
             trading_signals[start_time] = arb.generate_trading_signals(s)
             if i == 0:
                 self.ret_df = self.get_ret(arb.prices_df)
+                self.prices_df = self.get_prices(arb.prices_df)
             i += 1
             cols.append(arb.prices_df.columns)
 
         cols = np.unique(cols)
         self.ret_df = self.ret_df.loc[:, cols].shift(-1)
+        self.prices_df = self.prices_df.loc[:, cols]
         trading_signals = pd.DataFrame.from_dict(trading_signals, orient='index')
         return trading_signals
 
     def get_ret(self, df):
         return df.loc[self.start:self.finish].pct_change()[1:]
+
+    def get_prices(self, df):
+        return df.loc[self.start:self.finish]
 
     def trade(self):
         ts = pd.DataFrame(np.where(self.trading_signals == "BTO",
@@ -70,6 +78,12 @@ class Trade:
                           index=self.trading_signals.index,
                           columns=self.trading_signals.columns)
         return ts * self.ret_df
+
+    def get_weighted_prices(self):
+        return self.prices_df / self.prices_df.sum(axis=1)
+
+    def get_portfolio_ret(self):
+        return self.weighted_ret * self.get_weighted_prices()
 
 
 def main():
