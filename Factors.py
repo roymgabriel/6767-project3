@@ -29,6 +29,8 @@ class Factors:
         self.asset_std = None
         self.eigenvalues = None
         self.hourly_rets = None
+        self.st_rets = None
+        self.pca_eigenvectors = None
 
         self.Q_j = self.get_Q()
         self.F_jk = self.get_factor_return()
@@ -73,9 +75,9 @@ class Factors:
         used_symbols = list(self.symbols_df.loc[self.start])
         time_idx = self.returns_df.index.get_loc(self.start)
         self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M: time_idx]
-        st_rets = self.get_standardize_rets(self.hourly_rets).dropna(axis=0)
-        pca_eigenvectors = self.get_pca(st_rets)
-        Q = pca_eigenvectors / self.asset_std
+        self.st_rets =  self.get_standardize_rets(self.hourly_rets).dropna(axis=0)
+        self.pca_eigenvectors = self.get_pca(self.st_rets)
+        Q = self.pca_eigenvectors / self.asset_std
         return Q
 
     def get_factor_return(self):

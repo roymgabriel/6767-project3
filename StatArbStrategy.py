@@ -21,18 +21,19 @@ class StatArbStrategy:
         self.params = dict()
 
         # get Factor Returns
-        factors = Factors(window=window,
+        self.factors = Factors(window=window,
                           start=start,
                           finish=finish,
                           coins_file=coins_file,
                           prices_file=prices_file)
-        self.factor_returns = factors.get_factor_return()
-        self.hourly_returns = factors.hourly_rets
-        self.prices_df = factors.prices_df
+        self.factor_returns = self.factors.get_factor_return()
+        self.hourly_returns = self.factors.hourly_rets
+        self.prices_df = self.factors.prices_df
 
         self.residuals = self.estimate_resid_returns()
         self.X_l, self.xl_residuals = self.get_X_l()
         self.params_df = self.get_params()
+        self.s_score = self.get_s_score()
 
     def estimate_resid_returns(self):
         """
@@ -95,17 +96,17 @@ class StatArbStrategy:
             params[col] = [kappa, m, sigma, sigma_eq]
         return pd.DataFrame.from_dict(params, orient='index', columns=['kappa', 'm', 'sigma', 'sigma_eq'])
 
-    def get_s_score(self, params_df):
+    def get_s_score(self):
         """
         Calculate s-score at time t.
         :return:
         """
-        cpy = params_df.copy(deep=True)
+        cpy = self.params_df.copy(deep=True)
         m_mean = cpy['m'].mean()
         s_score = (m_mean - cpy['m']) / cpy['sigma_eq']
         return s_score
 
-    def generate_trading_signals(self, s_score):
+    def generate_trading_signals(self):
         """
         Generate trading signals at time t.
         :return:
@@ -118,16 +119,16 @@ class StatArbStrategy:
 
         # Conditions for trading signals
         conditions = [
-            (s_score < -s_bo),
-            (s_score > s_so),
-            (s_score < s_bc) & (s_score >= -s_bo),
-            (s_score > -s_sc) & (s_score <= s_so)
+            (self.s_score < -s_bo),
+            (self.s_score > s_so),
+            (self.s_score < s_bc) & (self.s_score >= -s_bo),
+            (self.s_score > -s_sc) & (self.s_score <= s_so)
         ]
 
         # Mapped values
         values = ['BTO', 'STO', 'CSP', 'CLP']
 
-        return pd.Series(np.select(conditions, values), name='Signals', index=s_score.index)
+        return pd.Series(np.select(conditions, values), name='Signals', index=self.s_score.index)
 
     def evaluate_strat(self):
         """
