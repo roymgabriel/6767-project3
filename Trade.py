@@ -80,10 +80,10 @@ class Trade:
         return ts * self.ret_df
 
     def get_weighted_prices(self):
-        return self.prices_df / self.prices_df.sum(axis=1)
+        return self.prices_df / self.prices_df.sum(axis=0)
 
     def get_portfolio_ret(self):
-        return self.weighted_ret * self.get_weighted_prices()
+        return (self.weighted_ret * self.get_weighted_prices()).sum(axis=1)
 
 
 def main():
