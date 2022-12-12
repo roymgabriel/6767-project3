@@ -20,25 +20,22 @@ class Trade:
         self.finish = finish
         self.coins_file = coins_file
         self.prices_file = prices_file
-        self.trading_signals = {}
-        self.hourly_returns = {}
-        self.weighted_returns = {}
+        self.ret_df = None
 
         # create date range in hourly offset
         self.date_range = pd.date_range(start, finish, freq='H')
 
-    def get_state(self):
-        """
-        A function to get all necessary info at time t
-        :return:
-        """
-        pass
+        self.trading_signals = self.get_trading_signals()
+        self.weighted_ret = self.trade()
 
     def get_trading_signals(self):
         """
         Get trading signals at each time t from start to finish
         :return:
         """
+        i = 0
+        cols = []
+        trading_signals = {}
         for start_time in self.date_range:
             arb = StatArbStrategy(window=self.window,
                                   start=start_time,
@@ -50,30 +47,39 @@ class Trade:
             s = arb.get_s_score(params)
 
             # get trading signals with a certain start time and their returns
-            self.trading_signals[start_time] = arb.generate_trading_signals(s)
-            self.hourly_returns[start_time] = arb.hourly_returns
+            trading_signals[start_time] = arb.generate_trading_signals(s)
+            if i == 0:
+                self.ret_df = self.get_ret(arb.prices_df)
+            i += 1
+            cols.append(arb.prices_df.columns)
 
-        return self.trading_signals
+        cols = np.unique(cols)
+        self.ret_df = self.ret_df.loc[:, cols].shift(-1)
+        trading_signals = pd.DataFrame.from_dict(trading_signals, orient='index')
+        return trading_signals
+
+    def get_ret(self, df):
+        return df.loc[self.start:self.finish].pct_change()[1:]
+
+    def trade(self):
+        ts = pd.DataFrame(np.where(self.trading_signals == "BTO",
+                                   1,
+                                   np.where(self.trading_signals == "STO",
+                                            -1,
+                                            0)),
+                          index=self.trading_signals.index,
+                          columns=self.trading_signals.columns)
+        return ts * self.ret_df
+
+def main():
+    start = "2021-09-26 00:00:00"
+    finish = "2022-09-25 23:00:00"
+
+    trade = Trade(window=240, start=start, finish=finish)
+    print(trade.weighted_ret)
 
 
-    def map_signal_to_trade(self, x):
-        if x == "BTO":
-            return 1
-        elif x == "STO":
-            return -1
-        elif x == "CSP":
-            return 1
-        elif x == "CLP":
-            return -1
-
-    def trade(self, pos, ):
-        # TODO: Need to map whether there was a change in signal or not from previous step
-        # TODO: The hourly returns do not match date, need to fix that but the concept is there
-        for start_time, df in self.trading_signals.items():
-            df['trade_pos'] = df.apply(self.map_signal_to_trade)
-            self.weighted_returns[start_time] = df['trade_pos'] * self.hourly_returns[start_time]
-
-
-
+if __name__ == "__main__":
+    main()
 
 

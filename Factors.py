@@ -72,7 +72,7 @@ class Factors:
         used_symbols = list(self.symbols_df.loc[self.start])
         time_idx = self.returns_df.index.get_loc(self.start)
         self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M: time_idx]
-        st_rets = self.get_standardize_rets(self.hourly_rets)
+        st_rets = self.get_standardize_rets(self.hourly_rets).dropna(axis=0)
         pca_eigenvectors = self.get_pca(st_rets)
         Q = pca_eigenvectors / self.asset_std
         return Q
