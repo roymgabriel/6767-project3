@@ -20,6 +20,7 @@ class Factors:
 
         # Getting the returns from the prices dataframe
         self.returns_df = self.__get_rets(self.prices_df)
+        self.returns_df = self.__clean_data(self.returns_df)
 
         # Additional parameters
         self.M = window
@@ -40,7 +41,7 @@ class Factors:
     def __clean_data(self, df):
         df.ffill(inplace=True)
         df.replace([np.inf, -np.inf], 0, inplace=True)
-        return df
+        return df.fillna(0)
 
     def __get_rets(self, prices_df):
         """
@@ -61,7 +62,6 @@ class Factors:
 
     def get_pca(self, df):
         emp_corr = self.get_corr_mat(df).fillna(0)
-        print(emp_corr)
         pca_model = PCA(n_components=2)
         pca_model.fit(emp_corr)
         self.eigenvalues = pca_model.explained_variance_
@@ -73,14 +73,16 @@ class Factors:
         used_symbols = list(self.symbols_df.loc[self.start])
         time_idx = self.returns_df.index.get_loc(self.start)
         self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M: time_idx]
-        st_rets = self.get_standardize_rets(self.hourly_rets).fillna(0)
+        st_rets = self.get_standardize_rets(self.hourly_rets).dropna(axis=0)
         pca_eigenvectors = self.get_pca(st_rets)
         Q = pca_eigenvectors / self.asset_std
         return Q
 
     def get_factor_return(self):
+        Q_j = self.Q_j.dropna(axis=1)
+        hourly_rets = self.hourly_rets.loc[:, Q_j.columns].T
         # Q is 2x40 and hourly_rets 239x40
-        return self.Q_j @ self.hourly_rets.T
+        return Q_j @ hourly_rets
 
 
 def main():
