@@ -6,7 +6,7 @@ from StatArbStrategy import StatArbStrategy
 
 class Trade:
     def __init__(self, window, start, finish, coins_file='data/coin_universe_150K_40.csv',
-                prices_file='data/coin_all_prices.csv'):
+                 prices_file='data/coin_all_prices.csv'):
         """
         A class that implements a statistical arbitrage strategy as proposed in [Avellaneda and Lee 2010]
         by looping from start time to finish time
@@ -71,6 +71,7 @@ class Trade:
                           columns=self.trading_signals.columns)
         return ts * self.ret_df
 
+
 def main():
     start = "2021-09-26 00:00:00"
     finish = "2022-09-25 23:00:00"
@@ -81,5 +82,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

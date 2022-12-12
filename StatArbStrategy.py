@@ -7,7 +7,7 @@ from Factors import Factors
 
 class StatArbStrategy:
     def __init__(self, window, start, finish, coins_file='data/coin_universe_150K_40.csv',
-                prices_file='data/coin_all_prices.csv'):
+                 prices_file='data/coin_all_prices.csv'):
         """
         A class that implements a statistical arbitrage strategy as proposed in [Avellaneda and Lee 2010].
         :param
@@ -21,7 +21,11 @@ class StatArbStrategy:
         self.params = dict()
 
         # get Factor Returns
-        factors = Factors(window=window, start=start, finish=finish)
+        factors = Factors(window=window,
+                          start=start,
+                          finish=finish,
+                          coins_file=coins_file,
+                          prices_file=prices_file)
         self.factor_returns = factors.get_factor_return()
         self.hourly_returns = factors.hourly_rets
         self.prices_df = factors.prices_df
@@ -29,7 +33,6 @@ class StatArbStrategy:
         self.residuals = self.estimate_resid_returns()
         self.X_l, self.xl_residuals = self.get_X_l()
         self.params_df = self.get_params()
-
 
     def estimate_resid_returns(self):
         """
@@ -69,9 +72,8 @@ class StatArbStrategy:
             xl_residuals[col] = resid
             # Returns the a and b coefficients for each currency
             coeffs[col] = [model.coef_[0], model.intercept_]
-        return pd.DataFrame.from_dict(coeffs, orient='index', columns=['b', 'a']).T, pd.DataFrame.from_dict(xl_residuals, orient='columns')
-
-
+        return pd.DataFrame.from_dict(coeffs, orient='index', columns=['b', 'a']).T, pd.DataFrame.from_dict(
+            xl_residuals, orient='columns')
 
     def get_params(self):
         """
@@ -87,9 +89,9 @@ class StatArbStrategy:
             resid = self.xl_residuals[col]
 
             kappa = -np.log(b) * 8760  # For the number of hours in a year
-            m = a / (1-b)
-            sigma = np.sqrt(np.var(resid) * 2 * kappa / (1 - b**2))
-            sigma_eq = np.sqrt(np.var(resid) / (1 - b**2))
+            m = a / (1 - b)
+            sigma = np.sqrt(np.var(resid) * 2 * kappa / (1 - b ** 2))
+            sigma_eq = np.sqrt(np.var(resid) / (1 - b ** 2))
             params[col] = [kappa, m, sigma, sigma_eq]
         return pd.DataFrame.from_dict(params, orient='index', columns=['kappa', 'm', 'sigma', 'sigma_eq'])
 
@@ -108,7 +110,7 @@ class StatArbStrategy:
         Generate trading signals at time t.
         :return:
         """
-        #TODO: might need to pass these as paramters
+        # TODO: might need to pass these as paramters
         s_bo = 1.25
         s_so = 1.25
         s_bc = 0.75
@@ -146,7 +148,7 @@ class StatArbStrategy:
         Compute Sharpe Ratio.
         :return:
         """
-        return (stats_df.loc['mean'] - rf)/stats_df.loc['std']
+        return (stats_df.loc['mean'] - rf) / stats_df.loc['std']
 
     def get_MDD(self, df: pd.DataFrame, col: str, window=12, min_periods=1):
         """
@@ -155,7 +157,7 @@ class StatArbStrategy:
         """
         # Change min_periods if you want to let the first X days data have an expanding window
         max_rolling_window = df[col].rolling(window, min_periods=1).max()
-        DD = df[col]/max_rolling_window - 1.0
+        DD = df[col] / max_rolling_window - 1.0
         return DD.rolling(window, min_periods=1).min()
 
     def plot_eigen_portfolio(self):
@@ -172,6 +174,7 @@ class StatArbStrategy:
         """
         pass
 
+
 def main():
     test = StatArbStrategy(window=240, start="2021-09-26 00:00:00", finish="2022-09-25 00:00:00")
     print(test.get_X_l()[1])
@@ -181,6 +184,7 @@ def main():
     print(s)
     print(test.generate_trading_signals(s))
     print("success")
+
 
 if __name__ == "__main__":
     main()
