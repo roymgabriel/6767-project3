@@ -29,7 +29,7 @@ class Trade:
         # create date range in hourly offset
         self.date_range = pd.date_range(start, finish, freq='H')
 
-        self.trading_signals, self.egn_port_wgts1, self.egn_port_wgts2, self.egn_port_vect1, self.egn_port_vect2, self.s_score = self.get_trading_signals()
+        self.trading_signals, self.egn_port_wgts1, self.egn_port_wgts2, self.egn_port_vect1, self.egn_port_vect2, self.s_score, self.egn_port1, self.egn_port2= self.get_trading_signals()
         self.weighted_ret = self.trade()
         self.portfolio_ret = self.get_portfolio_ret()
 
@@ -49,6 +49,7 @@ class Trade:
         egn_vect1 = []
         egn_vect2 = []
         s_score = []
+        egn_portfolios_ret = []
         for start_time in self.date_range:
             print(start_time)
             arb = StatArbStrategy(window=self.window,
@@ -70,6 +71,7 @@ class Trade:
             egn_vect1.append(arb.factors.pca_eigenvectors.iloc[0,:].rename(start_time))
             egn_portfolio_wgts2.append(arb.factors.Q_j.iloc[1,:].rename(start_time))
             egn_vect2.append(arb.factors.pca_eigenvectors.iloc[1,:].rename(start_time))
+            egn_portfolios_ret.append(arb.factors.egn_port_rets)
             s_score.append(arb.s_score.rename(start_time))
 
         cols = np.unique(cols)
@@ -81,7 +83,8 @@ class Trade:
         egn_port_df2 = pd.DataFrame(egn_portfolio_wgts2, columns=cols)
         egn_vect_df2 = pd.DataFrame(egn_vect2, columns=cols)
         s_score_df = pd.DataFrame(s_score, columns = cols)
-        return trading_signals, egn_port_df1, egn_port_df2, egn_vect_df1, egn_vect_df2, s_score_df
+        egn_port_ret_df = pd.concat(egn_portfolios_ret, axis=1)
+        return trading_signals, egn_port_df1, egn_port_df2, egn_vect_df1, egn_vect_df2, s_score_df, egn_port_ret_df.iloc[0, :], egn_port_ret_df.iloc[1, :]
 
     def get_ret(self, df):
         return df.loc[self.start:self.finish].pct_change()[1:]
@@ -124,10 +127,8 @@ class Trade:
 
 
     def cumulative_ret_plot(self, title):
-        wrets1 = pd.Series(np.sum((self.egn_port_wgts1.shift().dropna(how='all').fillna(0).values * self.ret_df.fillna(0).values), axis=1), name='WR1', index=self.ret_df.index)
-        wrets2 = pd.Series(np.sum((self.egn_port_wgts2.shift().dropna(how='all').fillna(0).values * self.ret_df.fillna(0).values), axis=1), name='WR2', index=self.ret_df.index)
-        cumwrets1 = (1 + wrets1).cumprod() - 1
-        cumwrets2 = (1 + wrets2).cumprod() - 1
+        cumwrets1 = (1 + self.egn_port1).cumprod() - 1
+        cumwrets2 = (1 + self.egn_port2).cumprod() - 1
         cumbitrets = (1 + self.ret_df['BTC']).cumprod() - 1
         cumethrets = (1 + self.ret_df['ETH']).cumprod() - 1
         cum_ret_df = pd.concat([cumwrets1, cumwrets2, cumbitrets, cumethrets], axis=1)
@@ -136,14 +137,14 @@ class Trade:
 
 def main():
     start = "2021-09-26 00:00:00"
-    finish = "2022-09-25 23:00:00"#"2022-09-25 23:00:00"
+    finish = "2021-10-26 23:00:00"#"2022-09-25 23:00:00"
 
     trade = Trade(window=240, start=start, finish=finish)
     trade.results_to_csv()
     trade.plot(trade.egn_port_wgts1.loc['2021-09-26 12:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 1 Weights at T1')
     trade.plot(trade.egn_port_wgts2.loc['2021-09-26 12:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 1 Weights at T1')
-    trade.plot(trade.egn_port_wgts1.loc['2021-10-25 23:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 2 Weights at T2')
-    trade.plot(trade.egn_port_wgts2.loc['2021-10-25 23:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 2 Weights at T2')
+    # trade.plot(trade.egn_port_wgts1.loc['2021-10-25 23:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 2 Weights at T2')
+    # trade.plot(trade.egn_port_wgts2.loc['2021-10-25 23:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 2 Weights at T2')
     trade.cumulative_ret_plot('Cumulative Returns Portfolio')
     trade.plot(trade.s_score['BTC'], 'Bitcoin S-Scores')
     trade.plot(trade.s_score['ETH'], 'Etherium S-Scores')

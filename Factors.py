@@ -34,6 +34,7 @@ class Factors:
 
         self.Q_j = self.get_Q()
         self.F_jk = self.get_factor_return()
+        self.egn_port_rets = self.get_eigen_port_returns()
 
     def __clean_dates(self, df):
         df['startTime'] = pd.to_datetime(df['startTime'].apply(lambda x: x.split(':')[0]), format='%Y-%m-%dT%H')
@@ -85,6 +86,11 @@ class Factors:
         hourly_rets = self.hourly_rets.loc[:, Q_j.columns].T
         # Q is 2x40 and hourly_rets 239x40
         return Q_j @ hourly_rets
+
+    def get_eigen_port_returns(self):
+        Q_j = self.Q_j.dropna(axis=1).fillna(0)
+        rets = self.returns_df[Q_j.columns].loc[self.start].fillna(0)
+        return pd.Series(np.nansum(Q_j.mul(rets), axis=1), name=self.start)
 
 
 def main():
