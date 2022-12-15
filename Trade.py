@@ -71,7 +71,7 @@ class Trade:
         rets = rets[Q.columns].fillna(0)
         rets.columns = Q.columns
         return pd.Series(Q.multiply(rets).sum(axis=1), index=Q.index)
-        
+
     # Funciton to write needed results to csv
     def results_to_csv(self):
         directory = 'results'
@@ -108,11 +108,11 @@ class Trade:
         # Writing data to csv
         self.results_to_csv()
 
-        # Plotting the eigen portfolio weights and vectors
+        # Plotting the eigen portfolio weights
         self.plot(self.results_dict['eigportwgts1'].loc['2021-09-26 12:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 1 Weights at T1')
-        self.plot(self.results_dict['eigvect1'].loc['2021-09-26 12:00:00'].dropna().sort_values(ascending=False), 'Eigen Vector at T1')
-        self.plot(self.results_dict['eigportwgts2'].loc['2021-10-25 23:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 2 Weights at T2')
-        self.plot(self.results_dict['eigvect2'].loc['2021-10-25 23:00:00'].dropna().sort_values(ascending=False), 'Eigen Vector at T2')
+        self.plot(self.results_dict['eigportwgts1'].loc['2022-04-15 20:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 1 Weights at T2')
+        self.plot(self.results_dict['eigportwgts2'].loc['2021-09-26 12:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 2 Weights at T1')
+        self.plot(self.results_dict['eigportwgts2'].loc['2022-04-15 20:00:00'].dropna().sort_values(ascending=False), 'Eigen Portfolio 2 Weights at T2')
 
         # Plotting the cumulative returns of the eigen portfolios relative to bitcoin and etherium
         self.eig_portfolio_ret_plot('Cumulative Returns Plot')
@@ -129,7 +129,7 @@ class Trade:
 
 def main():
     start = "2021-09-26 00:00:00"
-    finish = "2021-10-25 23:00:00"#"2022-09-25 23:00:00"
+    finish = "2022-09-25 23:00:00"#"2022-09-25 23:00:00"
 
     trade = Trade(window=240, start=start, finish=finish)
     trade.run_strategy()
