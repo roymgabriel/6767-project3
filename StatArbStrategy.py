@@ -132,10 +132,10 @@ class StatArbStrategy:
     def get_signal(self, t, window):
         st_ret = self.get_data_window(t, window)
         Q, eigen_vects= self.factors.get_Q(st_ret)
-        factor_rets = self.factors.get_factor_return(st_ret, Q)
-        residuals = self.estimate_resid_returns(factor_rets, st_ret)
+        factor_rets = self.factors.get_factor_return(st_ret, Q).replace([np.inf, -np.inf], np.nan).fillna(0)
+        residuals = self.estimate_resid_returns(factor_rets, st_ret).replace([np.inf, -np.inf], np.nan).fillna(0)
         X_l, X_l_residuals = self.get_X_l(residuals)
-        params = self.get_params(X_l, X_l_residuals)
+        params = self.get_params(X_l.replace([np.inf, -np.inf], np.nan).fillna(0), X_l_residuals.replace([np.inf, -np.inf], np.nan).fillna(0))
         s_score = self.get_s_score(params)
         signals = self.generate_trading_signals(s_score)
         return s_score, signals, Q, eigen_vects

@@ -27,8 +27,9 @@ class data_handler:
 
    # Function to add etherium if it hasnt been included
    def __add_eth(self, symbols_df):
-      mask = any('ETH' not in row for row in symbols_df)
-      symbols_df['39'] = symbols_df['39'] = 'ETH'
+      mask = symbols_df.iloc[-1].apply(lambda row: 'ETH' not in row, axis=1)
+      print(mask)
+      symbols_df['39'] = symbols_df['39'].mask(mask, 'ETH')
       return symbols_df
 
    # Clean the dates

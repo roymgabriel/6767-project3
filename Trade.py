@@ -128,7 +128,7 @@ class Trade:
 
 
 def main():
-    start = "2021-09-26 00:00:00"
+    start = "2022-03-22 03:00:00"
     finish = "2022-09-25 23:00:00"
 
     trade = Trade(window=240, start=start, finish=finish)
