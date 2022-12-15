@@ -9,7 +9,7 @@ class Factors:
 
     # Get the correlation matrix from the returns
     def get_corr_mat(self, df):
-        return df.corr()
+        return df.corr().fillna(0)
 
     # Get the PCA values for the given matrix of returns
     def get_pca(self, df):
