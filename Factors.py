@@ -1,104 +1,39 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
 
 class Factors:
-    def __init__(self, window, start, finish, coins_file='data/coin_universe_150K_40.csv',
-                 prices_file='data/coin_all_prices.csv'):
-        # Reading in symbols for the period
-        self.symbols_df = pd.read_csv(coins_file)
-        self.symbols_df = self.__clean_dates(self.symbols_df)
-        self.symbols_df = self.symbols_df[(self.symbols_df.index >= start) & (self.symbols_df.index <= finish)]
+    def __init__(self):
+        pass
 
-        # Reading in prices from csv
-        self.prices_df = pd.read_csv(prices_file)
-        self.prices_df = self.__clean_dates(self.prices_df)
-        self.prices_df = self.__clean_data(self.prices_df)
-        self.prices_df = self.prices_df[self.prices_df.index <= finish]
-
-        # Getting the returns from the prices dataframe
-        self.returns_df = self.__get_rets(self.prices_df)
-        self.returns_df = self.__clean_data(self.returns_df)
-
-        # Additional parameters
-        self.M = window
-        self.start = start
-        self.finish = finish
-        self.asset_std = None
-        self.eigenvalues = None
-        self.hourly_rets = None
-        self.st_rets = None
-        self.pca_eigenvectors = None
-
-        self.Q_j = self.get_Q()
-        self.F_jk = self.get_factor_return()
-        self.egn_port_rets = self.get_eigen_port_returns()
-
-    def __clean_dates(self, df):
-        df['startTime'] = pd.to_datetime(df['startTime'].apply(lambda x: x.split(':')[0]), format='%Y-%m-%dT%H')
-        df = df.set_index('startTime').drop('time', axis=1)
-        return df
-
-    def __clean_data(self, df):
-        df.ffill(inplace=True)
-        df.replace([np.inf, -np.inf], 0, inplace=True)
-        return df.fillna(0)
-
-    def __get_rets(self, prices_df):
-        """
-      Compute factor returns of the two risk factors at time t.
-      :return:
-      """
-        ret_df = prices_df.pct_change()
-        return ret_df
-
-    def get_standardize_rets(self, df):
-        self.asset_std = df.std()  # could also do np.sqrt(scaler.var_)
-        scaler = StandardScaler()
-        return pd.DataFrame(scaler.fit_transform(df), index=df.index, columns=df.columns)
-
+    # Get the correlation matrix from the returns
     def get_corr_mat(self, df):
-        st_rets = self.get_standardize_rets(df)
-        return st_rets.corr()
+        return df.corr()
 
+    # Get the PCA values for the given matrix of returns
     def get_pca(self, df):
-        emp_corr = self.get_corr_mat(df).fillna(0)
+        emp_corr = self.get_corr_mat(df)
         pca_model = PCA(n_components=2)
         pca_model.fit(emp_corr)
-        self.eigenvalues = pca_model.explained_variance_
+        eigenvalues = pca_model.explained_variance_
         eigenvectors = pd.DataFrame(pca_model.components_, columns=df.columns)
         # Returns the eigen vectors
-        return eigenvectors
+        return eigenvectors, eigenvalues
 
-    def get_Q(self):
-        used_symbols = list(self.symbols_df.loc[self.start])
-        time_idx = self.returns_df.index.get_loc(self.start)
-        self.hourly_rets = self.returns_df[used_symbols].iloc[time_idx - self.M: time_idx]
-        self.st_rets =  self.get_standardize_rets(self.hourly_rets).dropna(axis=0)
-        self.pca_eigenvectors = self.get_pca(self.st_rets)
-        Q = self.pca_eigenvectors / self.asset_std
-        return Q
+    # Returns the Q matrix and the corresponding eigen vectors
+    def get_Q(self, df):
+        pca_eigenvectors, _ = self.get_pca(df)
+        Q = pca_eigenvectors / df.std()
+        return Q, pca_eigenvectors
 
-    def get_factor_return(self):
-        Q_j = self.Q_j.dropna(axis=1)
-        hourly_rets = self.hourly_rets.loc[:, Q_j.columns].T
+    # Returns the factor returns for the given input
+    def get_factor_return(self, ret_df, Q_j_df):
         # Q is 2x40 and hourly_rets 239x40
-        return Q_j @ hourly_rets
+        return Q_j_df @ ret_df.T
 
     def get_eigen_port_returns(self):
         Q_j = self.Q_j.dropna(axis=1).fillna(0)
         rets = self.returns_df[Q_j.columns].loc[self.start].fillna(0)
         return pd.Series(np.nansum(Q_j.mul(rets), axis=1), name=self.start)
 
-
-def main():
-    test = Factors(240, "2021-11-10 05:00:00", '2022-09-25 23:00:00')
-    print(test.symbols_df.head())
-    print(test.Q_j)
-    print(test.F_jk)
-
-
-if __name__ == "__main__":
-    main()
