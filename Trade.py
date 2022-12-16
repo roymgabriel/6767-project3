@@ -33,8 +33,7 @@ class Trade:
         self.results_dict = None  # Contains all the results from the strategy
         self.trade_decisions = None
         self.SR = None
-        self.MDD1 = None
-        self.MDD2 = None
+        self.MDD = None
         self.egn_port1_rets = None
         self.egn_port2_rets = None
 
@@ -163,6 +162,7 @@ class Trade:
         :param cum_rets: cumulative return series
         :return: None
         """
+        cum_rets.name = "CSR"
         self.plot(cum_rets, 'Cumulative Strategy Returns')
 
     def stategy_rets_hist(self, strat_rets):
@@ -171,7 +171,8 @@ class Trade:
         :param strat_rets: strategy returns
         :return: None
         """
-        fig = px.histogram(strat_rets)
+        strat_rets.name = "Strategy Returns"
+        fig = px.histogram(strat_rets, x="Strategy Returns")
         fig.write_image("Histogram-Returns.png")
         fig.show()
 
@@ -192,6 +193,7 @@ class Trade:
         cumethrets = (1 + self.data.returns_df['ETH'][
             (self.data.returns_df.index >= self.start) & (self.data.returns_df.index <= self.finish)]).cumprod() - 1
         cum_ret_df = pd.concat([cumwrets1, cumwrets2, cumbitrets, cumethrets], axis=1)
+        cum_ret_df = cum_ret_df.rename(columns={0: "EP0", 1: "EP1"})
         self.plot_multiple(cum_ret_df, title)
 
     def get_SR(self, ret_series, rf: float = 0.0):
@@ -201,7 +203,7 @@ class Trade:
         """
         return (ret_series.mean() * np.sqrt(8760) - rf) / ret_series.std()
 
-    def get_MDD(self, portfolio_value: pd.DataFrame, window=12, min_periods=1):
+    def get_MDD(self, portfolio_value: pd.DataFrame, window=252, min_periods=1):
         """
         Compute maximum draw-down (MDD).
         :return: MDD
@@ -209,7 +211,11 @@ class Trade:
         # Change min_periods if you want to let the first X days data have an expanding window
         max_rolling_window = portfolio_value.rolling(window, min_periods=min_periods).max()
         DD = portfolio_value / max_rolling_window - 1.0
-        return DD.rolling(window, min_periods=min_periods).min()
+        MDD =  DD.rolling(window, min_periods=min_periods).min()
+        d = {'DD': DD, "MDD": MDD}
+        out_df = pd.DataFrame(d)
+        return out_df
+
 
     def report_results(self):
         """
@@ -243,8 +249,7 @@ class Trade:
 
         # Compute metrics
         self.SR = self.get_SR(rets)
-        print(f"The Sharpe Ratio is = {self.SR}")
-        self.MDD1 = self.get_MDD(self.egn_port1_rets)
-        self.MDD2 = self.get_MDD(self.egn_port2_rets)
-        self.plot(self.MDD1, "Maximum Draw Down of Portfolio 1 Returns")
-        self.plot(self.MDD2, "Maximum Draw Down of Portfolio 2 Returns")
+        print(f"The Sharpe Ratio for Strategy is = {self.SR}")
+        self.MDD = self.get_MDD(rets)
+        print(f"The MDD for Strategy Returns = {self.MDD.min()[0]}")
+        self.plot_multiple(self.MDD, "MDD of Strategy")
